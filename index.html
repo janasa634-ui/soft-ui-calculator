@@ -1,10 +1,131 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Soft UI Calculator</title>
-</head>
-<body>
-  <h1>Soft UI Calculator</h1>
-  <p>GitHub Pages شغال 🎉</p>
-</body>
-</html>
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.button import Button
+from kivy.uix.label import Label
+from kivy.graphics import Color, RoundedRectangle
+from kivy.core.window import Window
+
+Window.size = (360, 560)
+
+# ---------- Colors ----------
+BG_GRADIENT = (0.98, 0.76, 0.92, 1)
+CALC_BG = (1, 0.94, 0.97, 1)
+DISPLAY_BG = (0.99, 0.89, 0.90, 1)
+
+NUM_COLOR = (0.97, 0.73, 0.82, 1)
+OP_COLOR = (0.88, 0.75, 0.90, 1)
+EQUAL_COLOR = (0.81, 0.58, 0.85, 1)
+CLEAR_COLOR = (0.96, 0.56, 0.69, 1)
+
+TEXT_DARK = (0.29, 0.08, 0.29, 1)
+TEXT_LIGHT = (1, 1, 1, 1)
+
+# ---------- Rounded Button ----------
+class RoundButton(Button):
+    def __init__(self, bg_color, **kwargs):
+        super().__init__(**kwargs)
+        self.background_normal = ""
+        self.background_down = ""
+        self.color = TEXT_DARK
+        with self.canvas.before:
+            Color(*bg_color)
+            self.rect = RoundedRectangle(radius=[18])
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
+
+# ---------- App ----------
+class Calculator(App):
+    def build(self):
+        self.expression = ""
+
+        root = BoxLayout(padding=20)
+        with root.canvas.before:
+            Color(*BG_GRADIENT)
+            self.bg = RoundedRectangle(size=Window.size, pos=(0, 0))
+
+        calc = BoxLayout(orientation="vertical", padding=20, spacing=15)
+        with calc.canvas.before:
+            Color(*CALC_BG)
+            self.calc_bg = RoundedRectangle(radius=[30])
+
+        calc.bind(pos=self.update_calc, size=self.update_calc)
+
+        # Display
+        self.display = Label(
+            text="0",
+            font_size=38,
+            halign="right",
+            valign="middle",
+            color=TEXT_DARK
+        )
+        self.display.bind(size=self.display.setter("text_size"))
+
+        display_box = BoxLayout(padding=15)
+        with display_box.canvas.before:
+            Color(*DISPLAY_BG)
+            self.display_rect = RoundedRectangle(radius=[18])
+        display_box.bind(pos=self.update_display, size=self.update_display)
+        display_box.add_widget(self.display)
+
+        calc.add_widget(display_box)
+
+        # Buttons
+        grid = GridLayout(cols=4, spacing=12)
+
+        def add(text, color, action, span=1):
+            btn = RoundButton(
+                bg_color=color,
+                text=text,
+                font_size=20,
+                on_press=action
+            )
+            grid.add_widget(btn)
+
+        add("C", CLEAR_COLOR, self.clear)
+        add("C", CLEAR_COLOR, self.clear)
+        add("÷", OP_COLOR, lambda x: self.press("/"))
+        add("×", OP_COLOR, lambda x: self.press("*"))
+
+        for n in ["7","8","9","-","4","5","6","+","1","2","3"]:
+            color = OP_COLOR if n in "+-" else NUM_COLOR
+            add(n, color, lambda x, v=n: self.press(v))
+
+        add("0", NUM_COLOR, lambda x: self.press("0"))
+        add(".", NUM_COLOR, lambda x: self.press("."))
+        add("=", EQUAL_COLOR, self.calculate)
+        add("=", EQUAL_COLOR, self.calculate)
+
+        calc.add_widget(grid)
+        root.add_widget(calc)
+        return root
+
+    def update_calc(self, instance, value):
+        self.calc_bg.pos = instance.pos
+        self.calc_bg.size = instance.size
+
+    def update_display(self, instance, value):
+        self.display_rect.pos = instance.pos
+        self.display_rect.size = instance.size
+
+    def press(self, value):
+        if self.display.text == "0":
+            self.display.text = value
+        else:
+            self.display.text += value
+
+    def clear(self, _):
+        self.display.text = "0"
+
+    def calculate(self, _):
+        try:
+            self.display.text = str(eval(self.display.text))
+        except:
+            self.display.text = "Error"
+
+
+Calculator().run()
